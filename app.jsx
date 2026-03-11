@@ -1,0 +1,381 @@
+import { useState } from "react";
+
+const B = {
+  black: "#0A0A0A", black2: "#111111", black3: "#181818", black4: "#1E1E1C",
+  green: "#5DC676", greenBg: "rgba(93,198,118,.10)", greenBd: "rgba(93,198,118,.28)",
+  yellow: "#FFC83C", yellowBg: "rgba(255,200,60,.10)", yellowBd: "rgba(255,200,60,.28)",
+  blue: "#5DAADB", blueBg: "rgba(93,170,219,.10)", blueBd: "rgba(93,170,219,.28)",
+  white: "#E2E2DC", grey: "#9A9A90", grey2: "#6A6A62", grey3: "#333330",
+  border: "#222220", border2: "#2E2E2C",
+};
+
+const SUB_STAGES = {
+  A: [
+    {
+      id: "1.0", label: "Foundations",
+      desc: "Posicionamiento e infraestructura comercial antes de operar.",
+      detail: "foundations-custom",
+    },
+    {
+      id: "1.A", label: "Discovery",
+      desc: "Relevamiento del evento y construcción de la BDD de asistentes.",
+      detail: "discovery-custom",
+    },
+    {
+      id: "1.B", label: "Qualification",
+      desc: "Scoring de cada empresa contra el ICP con categorización automática.",
+      detail: [
+        { t: "Scoring", d: "Score 0-100 con categoría Hot / Qualified / Warm / Cold." },
+        { t: "Priorización", d: "BDD ordenada por probabilidad de conversión." },
+      ]
+    },
+    {
+      id: "1.C", label: "Cheat-Sheet",
+      desc: "Ficha operativa por prospecto calificado para usar antes y durante el evento.",
+      detail: [
+        { t: "Ficha por prospecto", d: "Pain probable, icebreaker sugerido y key message en una sola vista." },
+        { t: "Formato campo", d: "Optimizado para consulta móvil durante el evento." },
+      ]
+    },
+    {
+      id: "1.D", label: "Signaling",
+      desc: "Mapa de señales de compra predefinidas para registro en tiempo real.",
+      detail: [
+        { t: "Mapa de señales", d: "Indicadores priorizados por probabilidad de conversión." },
+        { t: "Registro en campo", d: "Score recalculado en tiempo real según señales detectadas." },
+      ]
+    },
+  ],
+  B: [
+    {
+      id: "2.A", label: "Secuencias",
+      desc: "Mensajes personalizados por canal con el evento como contexto.",
+      detail: [
+        { t: "Copy personalizado", d: "Mensaje por prospecto basado en pain del ICP y evento en común." },
+        { t: "Multi-canal", d: "LinkedIn y/o email. Hasta 3 toques con variación de ángulo." },
+      ]
+    },
+    {
+      id: "2.B", label: "Agendado",
+      desc: "Reuniones confirmadas antes de llegar al evento.",
+      detail: [
+        { t: "Gestión de respuestas", d: "Respuestas positivas derivadas al equipo para confirmar horario." },
+        { t: "Recordatorios", d: "Seguimiento automático a confirmados 24hs antes." },
+      ]
+    },
+    {
+      id: "2.C", label: "Tracking",
+      desc: "Visibilidad en tiempo real del estado de cada contacto.",
+      detail: [
+        { t: "Dashboard de estado", d: "Enviado / abierto / respondido / agendado por prospecto." },
+        { t: "Alertas", d: "Notificación inmediata cuando responde un Hot lead." },
+      ]
+    },
+  ],
+  C: [
+    {
+      id: "3.A", label: "Follow-up IA",
+      desc: "Seguimiento personalizado por contacto dentro de las primeras 24hs.",
+      detail: [
+        { t: "Generación automática", d: "La IA redacta el follow-up con contexto de la conversación del evento." },
+        { t: "Salida segmentada", d: "Hot leads en 4hs. Qualified en 24hs. Warm en 48hs." },
+      ]
+    },
+    {
+      id: "3.B", label: "CRM sync",
+      desc: "Registro completo de cada interacción, exportable al CRM.",
+      detail: [
+        { t: "Trazabilidad total", d: "Conversación, mensaje enviado, respuesta y próximo paso por prospecto." },
+        { t: "Reporte de pipeline", d: "Contactos, respuestas, reuniones y oportunidades por evento." },
+      ]
+    },
+  ],
+};
+
+const MODULES = {
+  A: { id:"A", label:"Discovery",           tagline:"Sabés quiénes van y cuáles son tus prospectos ideales.", color:B.green,  colorBg:B.greenBg,  colorBd:B.greenBd  },
+  B: { id:"B", label:"Outreach Pre-Evento",  tagline:"Llegás al evento con reuniones ya agendadas.",           color:B.yellow, colorBg:B.yellowBg, colorBd:B.yellowBd },
+  C: { id:"C", label:"Outreach Post-Evento", tagline:"El seguimiento sale en 24hs. Nada se enfría.",           color:B.blue,   colorBg:B.blueBg,   colorBd:B.blueBd   },
+};
+
+function HubspotLogo() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 100 100" fill="none">
+      <circle cx="50" cy="50" r="50" fill="#FF7A59"/>
+      <path d="M61 35.5v7.8a8.2 8.2 0 1 1-5.4 0V35.5a3.1 3.1 0 1 1 5.4 0zM43.5 54.8l-5.5-3.2-5.5 3.2v6.4l5.5 3.2 5.5-3.2v-6.4z" fill="white"/>
+    </svg>
+  );
+}
+function AttioLogo() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 100 100" fill="none">
+      <rect width="100" height="100" rx="22" fill="#1A1A2E"/>
+      <rect x="20" y="55" width="18" height="28" rx="4" fill="#6C63FF"/>
+      <rect x="41" y="35" width="18" height="48" rx="4" fill="#8B85FF"/>
+      <rect x="62" y="17" width="18" height="66" rx="4" fill="#B0ACFF"/>
+    </svg>
+  );
+}
+
+function InnerCard({ label, popup, color, colorBg, colorBd }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div style={{ position:"relative" }}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+    >
+      <div style={{
+        background: hov ? colorBg : B.black3,
+        border: `1px solid ${hov ? colorBd : B.border2}`,
+        borderRadius: 8, padding:"9px 12px",
+        transition:"all .15s", display:"flex", alignItems:"center", justifyContent:"space-between",
+        cursor: popup ? "default" : "default",
+      }}>
+        <span style={{ color: hov ? B.white : B.grey, fontSize:11, fontWeight:600 }}>{label}</span>
+        {popup && <span style={{ color, fontSize:8, opacity:.5 }}>●</span>}
+      </div>
+      {hov && popup && (
+        <div style={{
+          position:"absolute", left:"calc(100% + 10px)", top:"50%", transform:"translateY(-50%)",
+          background: B.black2, border:`1px solid ${colorBd}`,
+          borderRadius:10, padding:"11px 13px",
+          zIndex:100, minWidth:150, boxShadow:"0 8px 28px rgba(0,0,0,.6)",
+          pointerEvents:"none",
+        }}>
+          <div style={{ position:"absolute", left:-6, top:"50%", transform:"translateY(-50%)",
+            width:0, height:0, borderTop:"5px solid transparent", borderBottom:"5px solid transparent",
+            borderRight:`6px solid ${colorBd}` }}/>
+          {popup.label && (
+            <p style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color, letterSpacing:1.5,
+              textTransform:"uppercase", margin:"0 0 7px" }}>{popup.label}</p>
+          )}
+          <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+            {popup.items.map(item => (
+              <div key={item} style={{ display:"flex", alignItems:"center", gap:7 }}>
+                <span style={{ width:4, height:4, borderRadius:"50%", background:color, flexShrink:0 }}/>
+                <span style={{ color:B.white, fontSize:11 }}>{item}</span>
+              </div>
+            ))}
+          </div>
+          {popup.logos && (
+            <div style={{ display:"flex", gap:7, alignItems:"center", marginTop:9, paddingTop:8, borderTop:`1px solid ${B.border}` }}>
+              <HubspotLogo /><span style={{ color:B.grey2, fontSize:9, fontFamily:"'DM Mono',monospace" }}>HubSpot</span>
+              <AttioLogo /><span style={{ color:B.grey2, fontSize:9, fontFamily:"'DM Mono',monospace" }}>Attio</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FoundationsCard({ color, colorBg, colorBd }) {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:8 }}>
+      <InnerCard label="CRM Setup" color={color} colorBg={colorBg} colorBd={colorBd}
+        popup={{ items:["Básico","Sync","Implementación"], logos:true }} />
+      <InnerCard label="Brand Strategic Platform" color={color} colorBg={colorBg} colorBd={colorBd}
+        popup={{ label:"Incluye:", items:["ICP","Buyer Persona","Value Proposition","Key Messages"] }} />
+    </div>
+  );
+}
+
+function DiscoveryCard({ color, colorBg, colorBd }) {
+  const items = ["BDD Propia","BDD Eventos","BDD Exhibitors","Scrapping","Social Listening"];
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:8 }}>
+      {items.map(label => (
+        <InnerCard key={label} label={label} color={color} colorBg={colorBg} colorBd={colorBd} popup={null} />
+      ))}
+    </div>
+  );
+}
+
+// Each sub-stage card — openSub / setOpenSub passed in for mutual exclusion
+function SubCard({ sub, color, colorBg, colorBd, isLast, isOpen, onToggle }) {
+  const isCustom = sub.detail === "foundations-custom" || sub.detail === "discovery-custom";
+
+  return (
+    <div style={{ display:"flex", alignItems:"flex-start", minWidth:0 }}>
+      <div style={{ flex:1, minWidth:0 }}>
+        {/* Header */}
+        <div
+          onClick={() => !isCustom && onToggle()}
+          style={{
+            background: isOpen ? colorBg : B.black4,
+            border: `1px solid ${isOpen ? colorBd : B.border2}`,
+            borderRadius: isOpen && !isCustom ? "10px 10px 0 0" : 10,
+            padding:"12px 13px", cursor: isCustom ? "default" : "pointer",
+            transition:"all .18s",
+          }}
+        >
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5, gap:6 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:7, minWidth:0 }}>
+              <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, fontWeight:700, color, flexShrink:0 }}>{sub.id}</span>
+              <span style={{ color: isOpen ? B.white : B.grey, fontSize:12, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{sub.label}</span>
+            </div>
+            {!isCustom && <span style={{ color, fontSize:9, flexShrink:0 }}>{isOpen ? "▲" : "▼"}</span>}
+          </div>
+          <p style={{ color:B.grey2, fontSize:11, lineHeight:1.5, margin:0 }}>{sub.desc}</p>
+          {sub.detail === "foundations-custom" && <FoundationsCard color={color} colorBg={colorBg} colorBd={colorBd} />}
+          {sub.detail === "discovery-custom"   && <DiscoveryCard   color={color} colorBg={colorBg} colorBd={colorBd} />}
+        </div>
+
+        {/* Expanded detail */}
+        {isOpen && !isCustom && (
+          <div style={{ paddingLeft:10, borderLeft:`1px solid ${colorBd}`, display:"flex", flexDirection:"column", gap:5, marginTop:5 }}>
+            {sub.detail.map(d => (
+              <div key={d.t} style={{ background:B.black2, border:`1px solid ${B.border}`, borderRadius:8, padding:"10px 12px" }}>
+                <p style={{ color:B.white, fontSize:11, fontWeight:600, margin:"0 0 3px" }}>{d.t}</p>
+                <p style={{ color:B.grey, fontSize:10, lineHeight:1.6, margin:0 }}>{d.d}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Arrow to next */}
+      {!isLast && (
+        <div style={{ display:"flex", alignItems:"flex-start", paddingTop:19, paddingLeft:5, paddingRight:5, flexShrink:0 }}>
+          <div style={{ width:12, height:1, background:`${color}66`, marginTop:1 }} />
+          <div style={{ width:0, height:0, borderTop:"4px solid transparent", borderBottom:"4px solid transparent", borderLeft:`5px solid ${color}66` }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModuleTopCard({ mod, isOpen, onToggle }) {
+  return (
+    <div onClick={onToggle} style={{
+      background: isOpen ? mod.colorBg : B.black2,
+      border: `1px solid ${isOpen ? mod.colorBd : B.border}`,
+      borderRadius: 12, padding:"18px 18px 15px",
+      cursor:"pointer", transition:"all .2s", userSelect:"none",
+    }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+        <span style={{ fontFamily:"'DM Mono',monospace", fontSize:26, fontWeight:700, color:mod.color, opacity:.28, lineHeight:1 }}>{mod.id}</span>
+        <span style={{
+          background:mod.colorBg, border:`1px solid ${mod.colorBd}`, color:mod.color,
+          fontFamily:"'DM Mono',monospace", fontSize:8, letterSpacing:1.5,
+          padding:"3px 9px", borderRadius:20, textTransform:"uppercase",
+        }}>{isOpen ? "▲ cerrar" : "▼ ver más"}</span>
+      </div>
+      <h2 style={{ color:B.white, fontFamily:"'Georgia',serif", fontSize:17, fontWeight:700, margin:"0 0 4px" }}>{mod.label}</h2>
+      <p style={{ color:B.grey, fontSize:11, lineHeight:1.6, margin:0 }}>{mod.tagline}</p>
+    </div>
+  );
+}
+
+function Arrow({ colorL, colorR }) {
+  return (
+    <div style={{ display:"flex", alignItems:"flex-start", paddingTop:28, flexShrink:0, width:42 }}>
+      <div style={{ display:"flex", alignItems:"center" }}>
+        <div style={{ width:16, height:1, background:`${colorL}88` }} />
+        <div style={{ width:0, height:0, borderTop:"5px solid transparent", borderBottom:"5px solid transparent", borderLeft:`6px solid ${colorR}` }} />
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [openMod, setOpenMod]   = useState(null);  // which A/B/C is expanded
+  const [openSub, setOpenSub]   = useState(null);  // which sub-stage is open (mutual exclusion)
+  const mods = ["A","B","C"];
+
+  function toggleMod(id) {
+    setOpenMod(p => p === id ? null : id);
+    setOpenSub(null);
+  }
+  function toggleSub(id) {
+    setOpenSub(p => p === id ? null : id);
+  }
+
+  return (
+    <div style={{ background:B.black, minHeight:"100vh", fontFamily:"system-ui,-apple-system,sans-serif", display:"flex", flexDirection:"column" }}>
+
+      {/* Header */}
+      <div style={{ padding:"20px 26px 15px", borderBottom:`1px solid ${B.border}` }}>
+        <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, letterSpacing:3, color:B.green, textTransform:"uppercase" }}>⬡ Palta · Events Intelligence</span>
+        <h1 style={{ fontFamily:"'Georgia',serif", fontSize:22, color:B.white, margin:"7px 0 3px", fontWeight:700 }}>De la lista de asistentes al pipeline real.</h1>
+        <p style={{ color:B.grey, fontSize:12, margin:0 }}>3 módulos independientes. Contratables por separado o como sistema completo.</p>
+      </div>
+
+      <div style={{ flex:1, padding:"20px 26px 36px", overflowY:"auto" }}>
+
+        {/* ── Top row: A B C ── */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr auto 1fr auto 1fr", alignItems:"stretch" }}>
+          {mods.map((id, i) => (
+            <>
+              <div key={id}>
+                <ModuleTopCard mod={MODULES[id]} isOpen={openMod===id} onToggle={()=>toggleMod(id)} />
+              </div>
+              {i < 2 && <Arrow key={`a${i}`} colorL={MODULES[mods[i]].color} colorR={MODULES[mods[i+1]].color} />}
+            </>
+          ))}
+        </div>
+
+        {/* ── Gap between ABC and expansion ── */}
+        {openMod && <div style={{ height:8 }} />}
+
+        {/* ── Expansion panel ── */}
+        {openMod && (
+          <div style={{
+            background: B.black2,
+            border: `1px solid ${MODULES[openMod].colorBd}`,
+            borderRadius: 12,
+            padding:"16px 18px 20px",
+          }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+              <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, letterSpacing:2, color:MODULES[openMod].color, textTransform:"uppercase" }}>
+                Módulo {openMod} — Sub-etapas
+              </span>
+              <div style={{ flex:1, height:1, background:MODULES[openMod].colorBd }} />
+            </div>
+
+            {/* Sub-stage grid — equal columns, aligned */}
+            <div style={{
+              display:"grid",
+              gridTemplateColumns:`repeat(${SUB_STAGES[openMod].length}, 1fr)`,
+              gap:8,
+              alignItems:"start",
+            }}>
+              {SUB_STAGES[openMod].map((sub, i) => (
+                <SubCard
+                  key={sub.id}
+                  sub={sub}
+                  color={MODULES[openMod].color}
+                  colorBg={MODULES[openMod].colorBg}
+                  colorBd={MODULES[openMod].colorBd}
+                  isLast={i === SUB_STAGES[openMod].length - 1}
+                  isOpen={openSub === sub.id}
+                  onToggle={() => toggleSub(sub.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Suite CTA ── */}
+        <div style={{ marginTop:20, background:B.black2, border:`1px solid ${B.border2}`, borderRadius:12, padding:"14px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:16 }}>
+          <div>
+            <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:B.green, letterSpacing:2, textTransform:"uppercase", margin:"0 0 3px" }}>Suite completa</p>
+            <p style={{ color:B.white, fontSize:13, fontWeight:600, margin:"0 0 2px" }}>A + B + C — Sistema end-to-end</p>
+            <p style={{ color:B.grey, fontSize:11, margin:0 }}>Desde el análisis del evento hasta el CRM cargado.</p>
+          </div>
+          <div style={{ display:"flex", gap:7, alignItems:"center", flexShrink:0 }}>
+            {mods.map(id => (
+              <div key={id} style={{ width:28, height:28, borderRadius:7, background:MODULES[id].colorBg, border:`1px solid ${MODULES[id].colorBd}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:700, color:MODULES[id].color }}>{id}</span>
+              </div>
+            ))}
+            <span style={{ color:B.grey2, fontSize:14 }}>→</span>
+            <div style={{ background:B.greenBg, border:`1px solid ${B.greenBd}`, borderRadius:7, padding:"6px 13px" }}>
+              <span style={{ color:B.green, fontFamily:"'DM Mono',monospace", fontSize:10, fontWeight:700 }}>Pipeline medible</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
